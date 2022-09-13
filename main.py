@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--runs', type=int, nargs=1, default=5)
     parser.add_argument('--steps', type=int, nargs=1, default=50)
     parser.add_argument('--dims', type=int, nargs=1)
-    parser.add_argument('--device', type=str, nargs=1)
+    parser.add_argument('--device', type=str)
     parser.add_argument('--prompt', type=str)
 
     args = parser.parse_args()
