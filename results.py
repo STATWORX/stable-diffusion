@@ -13,7 +13,9 @@ results_df = results_df.pivot(index=['steps', 'dims'], columns='device', values=
 results_df['speed_up_mps_cpu'] = results_df['cpu'] / results_df['mps']
 
 # Speed up GPU vs. CPU
-results_df['speed_up_gpu_cpu'] = results_df['cpu'] / results_df['mps']
+results_df['speed_up_gpu_cpu'] = results_df['cpu'] / results_df['cuda']
 
 # Speed up GPU vs. M1
 results_df['speed_up_gpu_mps'] = results_df['mps'] / results_df['cuda']
+
+print(results_df)
