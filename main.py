@@ -1,5 +1,6 @@
 import torch
 import time
+import argparse
 import pandas as pd
 import numpy as np
 from diffusers import StableDiffusionPipeline
@@ -56,33 +57,53 @@ def run_diffusion(pipe: StableDiffusionPipeline,
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='Simulation parameters')
+    parser.add_argument('--runs', type=int, nargs=1, default=5)
+    parser.add_argument('--steps', type=int, nargs=1, default=50)
+    parser.add_argument('--dims', type=int, nargs=1)
+    parser.add_argument('--device', type=str, nargs=1)
+    parser.add_argument('--prompt', type=str)
+
+    args = parser.parse_args()
+
+    # Define device (either GPU, M1/2, or CPU)
+    if args.device is None or args.device not in ['cuda', 'cpu', 'mps']:
+        print('No device specified, using default device')
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
+    else:
+        device = args.device
+
+    # Define image dimensions (squared)
+    if args.dims is None:
+        dims_ls = [(512, 512), (768, 768)]
+    else:
+        dims_ls = [(args.dims, args.dims)]
+
+    # Define prompt
+    if args.prompt is None:
+        prompt = "A photo of an astronaut riding a horse in the style of H.P. Lovecraft trending on artstation"
+    else:
+        prompt = args.prompt
+
     # Read token from file
     with open(TOKEN_PATH, 'r') as f:
         token = f.read()
 
-    # Define device (either GPU, CPU, or M1/2)
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
-
+    # Model ID on huggingface hub
     model_id = 'CompVis/stable-diffusion-v1-4'
-
-    sim_runs = 5
-    steps_ls = [50, 100, 200]
-    dims_ls = [(512, 512), (768, 768)]
 
     # Load the model and transfer it to the correct device
     pipe = StableDiffusionPipeline.from_pretrained(model_id, use_auth_token=token)
     pipe.safety_checker = dummy
     pipe = pipe.to(device)
 
-    prompt = "A photo of an astronaut riding a horse in the style of H.P. Lovecraft trending on artstation"
-
     results_df = pd.merge(
-        pd.DataFrame({'steps': steps_ls}),
+        pd.DataFrame({'steps': args.steps}, index=(0, )),
         pd.DataFrame({'dims': dims_ls}),
         how='cross'
     )
@@ -92,13 +113,13 @@ if __name__ == '__main__':
 
     for idx, params in results_df.iterrows():
 
-        print(f'Running parameters {idx}/{results_df.shape[0]}')
+        print(f'Running parameters {idx + 1}/{results_df.shape[0]}: step={params["steps"]} with {params["dims"]}')
 
         image_ls = []
         total_time_ls = []
         time_per_step_ls = []
 
-        for run in np.arange(sim_runs):
+        for run in np.arange(args.runs):
 
             result, time_total, time_step = run_diffusion(pipe, prompt,
                                                           steps=params['steps'],
@@ -109,11 +130,11 @@ if __name__ == '__main__':
             total_time_ls.append(time_total)
             time_per_step_ls.append(time_step)
 
-        images_as_grid = image_grid(image_ls, 1, sim_runs * 1)
+        images_as_grid = image_grid(image_ls, 1, args.runs * 1)
         path = f'{IMG_PATH}/{prompt.replace(" ", "_")}_{params["steps"]}_{params["dims"][0]}x{params["dims"][1]}_.png'
         images_as_grid.save(path)
 
-        results_df.iloc[idx].loc['avg_total_time'] = np.mean(total_time_ls)
-        results_df.iloc[idx].loc['avg_time_step'] = np.mean(time_per_step_ls)
+        results_df.loc[idx, 'avg_total_time'] = np.mean(total_time_ls)
+        results_df.loc[idx, 'avg_time_step'] = np.mean(time_per_step_ls)
 
     results_df.to_pickle(f'{RESULTS_PATH}/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.pkl')
