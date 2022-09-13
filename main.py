@@ -68,13 +68,13 @@ if __name__ == '__main__':
 
     # Define device (either GPU, M1/2, or CPU)
     if args.device is None or args.device not in ['cuda', 'cpu', 'mps']:
-        print('No device specified, using default device')
         if torch.cuda.is_available():
             device = "cuda"
         elif torch.backends.mps.is_available():
             device = "mps"
         else:
             device = "cpu"
+        print(f'No device specified, using default device {device}')
     else:
         device = args.device
 
