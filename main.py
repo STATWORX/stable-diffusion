@@ -134,6 +134,8 @@ if __name__ == '__main__':
         path = f'{IMG_PATH}/{prompt.replace(" ", "_")}_{params["steps"]}_{params["dims"][0]}x{params["dims"][1]}_.png'
         images_as_grid.save(path)
 
+        images_as_grid.show()
+
         results_df.loc[idx, 'avg_total_time'] = np.mean(total_time_ls)
         results_df.loc[idx, 'avg_time_step'] = np.mean(time_per_step_ls)
 
